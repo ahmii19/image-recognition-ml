@@ -18,10 +18,11 @@ from src.api.config import (
     LOG_LEVEL,
 )
 from src.api.errors import register_error_handlers
-from src.api.routes import health, models, open_vocab, open_vocab_detection, recognition
+from src.api.routes import health, models, open_vocab, open_vocab_detection, recognition, understand
 from src.phase3.engine import AdvancedRecognitionEngine
 from src.phase6.engine import OpenVocabEngine
 from src.phase6.owlvit.lifecycle import OWLViTLifecycleManager
+from src.phase7.lifecycle import VLMLifecycleManager
 
 # Configure Logging
 logging.basicConfig(
@@ -63,6 +64,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.engine = None
     app.state.open_vocab_engine = None
     OWLViTLifecycleManager.unload()
+    VLMLifecycleManager.unload()  # No-op if VLM was never loaded (lazy)
 
 
 def create_app() -> FastAPI:
@@ -114,6 +116,7 @@ def create_app() -> FastAPI:
     app.include_router(recognition.router, prefix=API_V1_STR)
     app.include_router(open_vocab.router, prefix=API_V1_STR)
     app.include_router(open_vocab_detection.router, prefix=API_V1_STR)
+    app.include_router(understand.router, prefix=API_V1_STR)
 
     # 5. Root convenience redirect to /docs
     @app.get("/", include_in_schema=False)

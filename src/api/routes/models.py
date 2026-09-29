@@ -5,6 +5,7 @@ from src.api.config import ALLOWED_IMAGE_EXTENSIONS, MAX_UPLOAD_SIZE_MB
 from src.api.schemas import (
     ClassifierModelInfo,
     DetectorModelInfo,
+    GeneralUnderstandingModelInfo,
     ModelInfoResponse,
     OpenVocabDetectionModelInfo,
     OpenVocabModelInfo,
@@ -22,6 +23,9 @@ from src.phase6.owlvit.config import (
     OWL_VIT_MODEL_ID,
 )
 from src.phase6.owlvit.lifecycle import OWLViTLifecycleManager
+from src.phase7.config import VLM_MODEL_ID
+from src.phase7.lifecycle import VLMLifecycleManager
+from src.phase7.prompts import PromptMode
 
 router = APIRouter(tags=["Model Metadata"])
 
@@ -36,6 +40,8 @@ async def get_models_info() -> ModelInfoResponse:
     """Return model architecture metadata and operational parameters."""
     dev_info = get_device_info()
     owl_status = OWLViTLifecycleManager.get_status()
+    vlm_status = VLMLifecycleManager.get_status()
+    vlm_supported_modes = [m.value for m in PromptMode if m != PromptMode.CUSTOM]
 
     return ModelInfoResponse(
         classifier=ClassifierModelInfo(
@@ -78,6 +84,14 @@ async def get_models_info() -> ModelInfoResponse:
             max_regions=DEFAULT_MAX_REGIONS,
             crop_padding_percent=DEFAULT_CROP_PADDING_PERCENT,
         ),
+        general_understanding=GeneralUnderstandingModelInfo(
+            available=True,
+            model_id=VLM_MODEL_ID,
+            loaded=vlm_status["loaded"],
+            device=vlm_status["device"],
+            lazy_loaded=True,
+            supported_modes=vlm_supported_modes,
+        ),
         device_info=dev_info,
         supported_formats=sorted(list(ALLOWED_IMAGE_EXTENSIONS)),
         supported_modes=[
@@ -87,6 +101,7 @@ async def get_models_info() -> ModelInfoResponse:
             "open_vocabulary",
             "open_vocabulary_detection",
             "region_recognition",
+            "general_understanding",
         ],
         max_upload_size_mb=MAX_UPLOAD_SIZE_MB,
     )

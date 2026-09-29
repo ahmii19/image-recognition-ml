@@ -90,6 +90,7 @@ class ModelInfoResponse(BaseModel):
     open_vocabulary: Optional[OpenVocabModelInfo] = None
     open_vocabulary_detection: Optional[OpenVocabDetectionModelInfo] = None
     region_intelligence: Optional[RegionIntelligenceModelInfo] = None
+    general_understanding: Optional["GeneralUnderstandingModelInfo"] = None
     device_info: Optional[Dict[str, Any]] = None
     supported_formats: List[str] = Field(..., examples=[["jpg", "jpeg", "png", "webp", "bmp"]])
     supported_modes: List[str] = Field(..., examples=[["all", "classification", "detection", "open_vocabulary", "open_vocabulary_detection", "region_recognition"]])
@@ -424,3 +425,126 @@ class ErrorResponse(BaseModel):
     """Normalized error envelope returned for all 4xx and 5xx responses."""
     success: bool = Field(default=False, examples=[False])
     error: ErrorDetail
+
+
+# ---------------------------------------------------------------------------
+# Phase 7 — General Image Understanding Schemas (VLM / Qwen2.5-VL)
+# ---------------------------------------------------------------------------
+
+class VLMImageInfo(BaseModel):
+    """Image metadata attached to VLM understanding responses."""
+    width: int = Field(..., examples=[1280])
+    height: int = Field(..., examples=[720])
+    mode: str = Field(..., examples=["RGB"])
+
+
+class VLMTimingInfo(BaseModel):
+    """Granular latency breakdown for VLM inference pipeline."""
+    preprocessing_ms: float = Field(..., examples=[12.4])
+    inference_ms: float = Field(..., examples=[18200.5])
+    decoding_ms: float = Field(..., examples=[55.2])
+    parsing_ms: float = Field(..., examples=[0.8])
+    total_ms: float = Field(..., examples=[18268.9])
+
+
+class VLMParseMeta(BaseModel):
+    """Audit metadata from the Phase 7 structured response parser."""
+    recovered: bool = Field(
+        ...,
+        examples=[False],
+        description="True if recovery strategies were needed to extract JSON from VLM output.",
+    )
+    recovery_method: str = Field(
+        ...,
+        examples=["direct"],
+        description="Parse strategy that succeeded: direct, markdown_fence_strip, json_object_extraction, partial_key_extraction, none.",
+    )
+    missing_keys: List[str] = Field(
+        default_factory=list,
+        examples=[[]],
+        description="Expected JSON keys not found in the VLM response.",
+    )
+    extra_keys: List[str] = Field(
+        default_factory=list,
+        examples=[[]],
+        description="Keys returned by the VLM that were not expected by the prompt schema.",
+    )
+    warnings: List[str] = Field(
+        default_factory=list,
+        examples=[[]],
+        description="Non-fatal parse warnings encountered.",
+    )
+
+
+class VLMUnderstandingResponse(BaseModel):
+    """Response contract for POST /api/v1/understand.
+
+    The `understanding` field contains the structured VLM output whose exact keys
+    depend on the prompt mode used. Refer to the `mode` field to determine the schema.
+    """
+    success: bool = Field(..., examples=[True])
+    mode: str = Field(
+        ...,
+        examples=["general"],
+        description="Prompt mode used: general, detailed, document, diagram, chart, map, medical, brief, custom.",
+    )
+    model_id: str = Field(..., examples=["Qwen/Qwen2.5-VL-3B-Instruct"])
+    device: str = Field(..., examples=["cpu"])
+    image_info: VLMImageInfo
+    understanding: Dict[str, Any] = Field(
+        ...,
+        description="Structured VLM output. Keys depend on the prompt mode.",
+        examples=[{
+            "scene_type": "photograph",
+            "main_subject": "a golden retriever",
+            "setting": "outdoor park",
+            "objects": ["dog", "grass", "tree"],
+            "activities": ["sitting"],
+            "mood": "calm",
+            "image_quality": "high",
+            "summary": "A golden retriever sitting peacefully in a park.",
+        }],
+    )
+    parse_meta: VLMParseMeta
+    timing: VLMTimingInfo
+    request_id: Optional[str] = Field(default=None, examples=["req-7b89f2a0"])
+
+
+class VLMStatusResponse(BaseModel):
+    """Runtime lifecycle telemetry for the Phase 7 VLM engine."""
+    loaded: bool = Field(..., examples=[False])
+    model_id: str = Field(..., examples=["Qwen/Qwen2.5-VL-3B-Instruct"])
+    device: str = Field(..., examples=["cpu"])
+    load_count: int = Field(..., examples=[0])
+    total_inferences: int = Field(..., examples=[0])
+    last_accessed_at: Optional[float] = Field(default=None, examples=[None])
+    auto_unload_enabled: bool = Field(..., examples=[False])
+    idle_unload_seconds: int = Field(..., examples=[600])
+    load_in_4bit: bool = Field(..., examples=[False])
+    load_in_8bit: bool = Field(..., examples=[False])
+    param_count: int = Field(..., examples=[0])
+    load_time_s: float = Field(..., examples=[0.0])
+    lazy_loaded: bool = Field(..., examples=[True])
+
+
+class VLMUnloadResponse(BaseModel):
+    """Response for explicit VLM unload request."""
+    success: bool = Field(..., examples=[True])
+    message: str = Field(..., examples=["VLM model unloaded from memory."])
+    unloaded: bool = Field(..., examples=[True])
+
+
+class GeneralUnderstandingModelInfo(BaseModel):
+    """Metadata for the Phase 7 General Image Understanding VLM."""
+    available: bool = Field(default=True, examples=[True])
+    model_id: str = Field(..., examples=["Qwen/Qwen2.5-VL-3B-Instruct"])
+    loaded: bool = Field(default=False, examples=[False])
+    device: str = Field(default="cpu", examples=["cpu"])
+    lazy_loaded: bool = Field(default=True, examples=[True])
+    supported_modes: List[str] = Field(
+        default_factory=lambda: [
+            "general", "detailed", "document", "diagram",
+            "chart", "map", "medical", "brief", "custom",
+        ],
+        examples=[["general", "detailed", "document", "brief"]],
+    )
