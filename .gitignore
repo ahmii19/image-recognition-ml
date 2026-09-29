@@ -1,0 +1,40 @@
+# Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Node & Next.js frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/.env*.local
+node_modules/
+.next/
+
+# Data & Models (raw downloads and saved checkpoints)
+data/
+models/*
+!models/.gitkeep
+outputs/
+scratch/
+
+# Environment files
+.env
+.env.local
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

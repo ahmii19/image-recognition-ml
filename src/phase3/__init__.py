@@ -1,0 +1,13 @@
+"""Phase 3 Advanced Image Recognition & Object Detection Engine package."""
+
+from src.phase3.config import (
+    DEFAULT_CLASSIFICATION_CONFIDENCE_THRESHOLD,
+    DEFAULT_DETECTION_CONFIDENCE_THRESHOLD,
+    COCO_LABELS,
+)
+
+__all__ = [
+    "DEFAULT_CLASSIFICATION_CONFIDENCE_THRESHOLD",
+    "DEFAULT_DETECTION_CONFIDENCE_THRESHOLD",
+    "COCO_LABELS",
+]
